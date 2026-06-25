@@ -32,6 +32,9 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
+      - name: Repair Android project files
+        run: flutter create . --platforms=android --project-name=kai_post_generator --org com.kai
+
       - name: Install dependencies
         run: flutter pub get
 
