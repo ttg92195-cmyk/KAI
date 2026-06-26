@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/models.dart';
+import '../widgets/app_network_image.dart';
 
 class FormScreen extends StatefulWidget {
   final MoviePost post;
@@ -160,35 +161,10 @@ class _FormScreenState extends State<FormScreen> {
                       child: const Icon(Icons.broken_image,
                           color: Colors.white24),
                     )
-                  : Image.network(
-                      _post.poster,
+                  : AppNetworkImage(
+                      url: _post.poster,
                       width: 90,
                       height: 135,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return Container(
-                          width: 90,
-                          height: 135,
-                          color: Colors.black26,
-                          child: const Center(
-                            child: SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFFE50914)),
-                            ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 90,
-                        height: 135,
-                        color: Colors.black26,
-                        child: const Icon(Icons.broken_image,
-                            color: Colors.white24),
-                      ),
                     ),
               const SizedBox(width: 12),
               Expanded(

@@ -4,6 +4,7 @@ import 'services/storage_service.dart';
 import 'screens/search_screen.dart';
 import 'screens/form_screen.dart';
 import 'screens/output_screen.dart';
+import 'widgets/app_network_image.dart';
 import 'models/models.dart';
 
 void main() {
@@ -513,19 +514,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         : ClipRRect(
                                             borderRadius:
                                                 BorderRadius.circular(6),
-                                            child: Image.network(
-                                              post.poster,
+                                            child: AppNetworkImage(
+                                              url: post.poster,
                                               width: 50,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  Container(
-                                                width: 50,
-                                                color: Colors.black26,
-                                                child: const Icon(
-                                                    Icons.broken_image,
-                                                    color:
-                                                        Colors.white30),
-                                              ),
                                             ),
                                           )),
                                 title: Text(

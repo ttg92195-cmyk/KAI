@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/tmdb_service.dart';
+import '../widgets/app_network_image.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -145,16 +146,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                 child: const Icon(Icons.movie,
                                     color: Colors.white24),
                               )
-                            : Image.network(
-                                r.poster,
+                            : AppNetworkImage(
+                                url: r.poster,
                                 width: 50,
                                 height: 75,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 50,
-                                  height: 75,
-                                  color: Colors.black26,
-                                ),
                               ),
                         title: Text(r.title,
                             style: const TextStyle(color: Colors.white)),
