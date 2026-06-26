@@ -21,6 +21,14 @@ class ServerLink {
         quality: '',
       );
 
+  factory ServerLink.fromJson(Map<String, dynamic> j) => ServerLink(
+        serverName: (j['serverName'] ?? '').toString(),
+        url: (j['url'] ?? '').toString(),
+        size: (j['size'] ?? '').toString(),
+        quality: (j['quality'] ?? '').toString(),
+        fileName: j['fileName']?.toString(),
+      );
+
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
       'serverName': serverName,
@@ -53,6 +61,17 @@ class Episode {
         videoUrl: '',
       );
 
+  factory Episode.fromJson(Map<String, dynamic> j) => Episode(
+        name: (j['name'] ?? '').toString(),
+        videoUrl: (j['videoUrl'] ?? '').toString(),
+        downloadLinks: ((j['downloadLinks'] as List?) ?? [])
+            .map((e) => ServerLink.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        watchLinks: ((j['watchLinks'] as List?) ?? [])
+            .map((e) => ServerLink.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+
   Map<String, dynamic> toJson() => {
         'name': name,
         'videoUrl': videoUrl,
@@ -73,6 +92,13 @@ class Season {
   }) : episodes = episodes ?? [];
 
   factory Season.empty() => Season(name: '');
+
+  factory Season.fromJson(Map<String, dynamic> j) => Season(
+        name: (j['name'] ?? '').toString(),
+        episodes: ((j['episodes'] as List?) ?? [])
+            .map((e) => Episode.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
 
   Map<String, dynamic> toJson() => {
         'name': name,
@@ -121,6 +147,30 @@ class MoviePost {
         poster: '',
         overview: '',
         type: 'movie',
+      );
+
+  factory MoviePost.fromJson(Map<String, dynamic> j) => MoviePost(
+        title: (j['title'] ?? '').toString(),
+        year: (j['year'] ?? '').toString(),
+        poster: (j['poster'] ?? '').toString(),
+        overview: (j['overview'] ?? '').toString(),
+        type: (j['type'] ?? 'movie').toString(),
+        tmdbId: j['tmdbId'] is int ? j['tmdbId'] : int.tryParse('${j['tmdbId']}'),
+        categories: ((j['categories'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toList(),
+        resolution: (j['resolution'] ?? '').toString(),
+        fileSize: (j['fileSize'] ?? '').toString(),
+        format: (j['format'] ?? '').toString(),
+        downloadLinks: ((j['downloadLinks'] as List?) ?? [])
+            .map((e) => ServerLink.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        watchLinks: ((j['watchLinks'] as List?) ?? [])
+            .map((e) => ServerLink.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        seasons: ((j['seasons'] as List?) ?? [])
+            .map((e) => Season.fromJson(e as Map<String, dynamic>))
+            .toList(),
       );
 
   Map<String, dynamic> toJson() => {

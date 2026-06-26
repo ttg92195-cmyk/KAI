@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/tmdb_service.dart';
+import 'services/storage_service.dart';
 import 'screens/search_screen.dart';
 import 'screens/form_screen.dart';
 import 'screens/output_screen.dart';
@@ -74,6 +75,28 @@ class _HomeScreenState extends State<HomeScreen> {
   // Multi-select state
   final Set<int> _selected = <int>{};
   bool _selectMode = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
+  }
+
+  Future<void> _loadPosts() async {
+    final loaded = await StorageService.loadPosts();
+    if (!mounted) return;
+    setState(() {
+      _posts
+        ..clear()
+        ..addAll(loaded);
+      _loading = false;
+    });
+  }
+
+  Future<void> _persist() async {
+    await StorageService.savePosts(_posts);
+  }
 
   @override
   void dispose() {
@@ -132,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (created != null) {
       setState(() => _posts.add(created));
+      _persist();
     }
   }
 
@@ -148,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (edited != null) {
       setState(() => _posts[index] = edited);
+      _persist();
     }
   }
 
@@ -212,6 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _selected.clear();
       _selectMode = false;
     });
+    _persist();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Deleted selected posts')),
     );
@@ -235,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ..addAll(newSel);
       if (_selected.isEmpty) _selectMode = false;
     });
+    _persist();
   }
 
   @override
@@ -394,7 +421,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Posts list
           Expanded(
-            child: _posts.isEmpty
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFE50914),
+                    ),
+                  )
+                : _posts.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
