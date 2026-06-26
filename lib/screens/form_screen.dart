@@ -43,6 +43,14 @@ class _FormScreenState extends State<FormScreen> {
         TextEditingController(text: _post.categories.join(', '));
     _tmdbIdCtrl = TextEditingController(
         text: _post.tmdbId == null ? '' : _post.tmdbId.toString());
+
+    // Live-update poster preview as user types the URL
+    _posterCtrl.addListener(() {
+      final v = _posterCtrl.text.trim();
+      if (v != _post.poster) {
+        setState(() => _post.poster = v);
+      }
+    });
   }
 
   @override
@@ -157,10 +165,29 @@ class _FormScreenState extends State<FormScreen> {
                       width: 90,
                       height: 135,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          width: 90,
+                          height: 135,
+                          color: Colors.black26,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFE50914)),
+                            ),
+                          ),
+                        );
+                      },
                       errorBuilder: (_, __, ___) => Container(
                         width: 90,
                         height: 135,
                         color: Colors.black26,
+                        child: const Icon(Icons.broken_image,
+                            color: Colors.white24),
                       ),
                     ),
               const SizedBox(width: 12),
@@ -220,14 +247,28 @@ class _FormScreenState extends State<FormScreen> {
           _sectionHeader('Download Links', () {
             setState(() => _post.downloadLinks.add(ServerLink.empty()));
           }),
-          ..._downloadLinkEditors(),
+          for (var i = 0; i < _post.downloadLinks.length; i++)
+            LinkCard(
+              key: ValueKey('dl_$i\_${_post.downloadLinks[i].hashCode}'),
+              index: i + 1,
+              link: _post.downloadLinks[i],
+              showFileName: true,
+              onRemove: () => setState(() => _post.downloadLinks.removeAt(i)),
+            ),
 
           // --- Watch links ---
           const SizedBox(height: 20),
           _sectionHeader('Watch Links', () {
             setState(() => _post.watchLinks.add(ServerLink.empty()));
           }),
-          ..._watchLinkEditors(),
+          for (var i = 0; i < _post.watchLinks.length; i++)
+            LinkCard(
+              key: ValueKey('wl_$i\_${_post.watchLinks[i].hashCode}'),
+              index: i + 1,
+              link: _post.watchLinks[i],
+              showFileName: false,
+              onRemove: () => setState(() => _post.watchLinks.removeAt(i)),
+            ),
 
           // --- Seasons (only for series) ---
           if (_post.type == 'series') ...[
@@ -235,7 +276,13 @@ class _FormScreenState extends State<FormScreen> {
             _sectionHeader('Seasons', () {
               setState(() => _post.seasons.add(Season.empty()));
             }),
-            ..._seasonEditors(),
+            for (var i = 0; i < _post.seasons.length; i++)
+              SeasonCard(
+                key: ValueKey('season_$i\_${_post.seasons[i].hashCode}'),
+                season: _post.seasons[i],
+                index: i + 1,
+                onRemove: () => setState(() => _post.seasons.removeAt(i)),
+              ),
           ],
 
           const SizedBox(height: 20),
@@ -287,67 +334,59 @@ class _FormScreenState extends State<FormScreen> {
       decoration: InputDecoration(labelText: label),
     );
   }
-
-  List<Widget> _downloadLinkEditors() {
-    final list = <Widget>[];
-    for (var i = 0; i < _post.downloadLinks.length; i++) {
-      final link = _post.downloadLinks[i];
-      list.add(_LinkCard(
-        index: i + 1,
-        link: link,
-        showFileName: true,
-        onChanged: () => setState(() {}),
-        onRemove: () => setState(() => _post.downloadLinks.removeAt(i)),
-      ));
-    }
-    return list;
-  }
-
-  List<Widget> _watchLinkEditors() {
-    final list = <Widget>[];
-    for (var i = 0; i < _post.watchLinks.length; i++) {
-      final link = _post.watchLinks[i];
-      list.add(_LinkCard(
-        index: i + 1,
-        link: link,
-        showFileName: false,
-        onChanged: () => setState(() {}),
-        onRemove: () => setState(() => _post.watchLinks.removeAt(i)),
-      ));
-    }
-    return list;
-  }
-
-  List<Widget> _seasonEditors() {
-    final list = <Widget>[];
-    for (var i = 0; i < _post.seasons.length; i++) {
-      final s = _post.seasons[i];
-      list.add(_SeasonCard(
-        season: s,
-        index: i + 1,
-        onChanged: () => setState(() {}),
-        onRemove: () => setState(() => _post.seasons.removeAt(i)),
-      ));
-    }
-    return list;
-  }
 }
 
-// ---------- Link Card ----------
-class _LinkCard extends StatelessWidget {
+// ---------- Link Card (StatefulWidget - persistent controllers) ----------
+class LinkCard extends StatefulWidget {
   final int index;
   final ServerLink link;
   final bool showFileName;
-  final VoidCallback onChanged;
   final VoidCallback onRemove;
 
-  const _LinkCard({
+  const LinkCard({
+    super.key,
     required this.index,
     required this.link,
     required this.showFileName,
-    required this.onChanged,
     required this.onRemove,
   });
+
+  @override
+  State<LinkCard> createState() => _LinkCardState();
+}
+
+class _LinkCardState extends State<LinkCard> {
+  late TextEditingController _serverCtrl;
+  late TextEditingController _urlCtrl;
+  late TextEditingController _sizeCtrl;
+  late TextEditingController _qualityCtrl;
+  late TextEditingController _fileNameCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _serverCtrl = TextEditingController(text: widget.link.serverName);
+    _urlCtrl = TextEditingController(text: widget.link.url);
+    _sizeCtrl = TextEditingController(text: widget.link.size);
+    _qualityCtrl = TextEditingController(text: widget.link.quality);
+    _fileNameCtrl = TextEditingController(text: widget.link.fileName ?? '');
+
+    _serverCtrl.addListener(() => widget.link.serverName = _serverCtrl.text);
+    _urlCtrl.addListener(() => widget.link.url = _urlCtrl.text);
+    _sizeCtrl.addListener(() => widget.link.size = _sizeCtrl.text);
+    _qualityCtrl.addListener(() => widget.link.quality = _qualityCtrl.text);
+    _fileNameCtrl.addListener(() => widget.link.fileName = _fileNameCtrl.text);
+  }
+
+  @override
+  void dispose() {
+    _serverCtrl.dispose();
+    _urlCtrl.dispose();
+    _sizeCtrl.dispose();
+    _qualityCtrl.dispose();
+    _fileNameCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -362,64 +401,44 @@ class _LinkCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Link #$index',
+                Text('Link #${widget.index}',
                     style: const TextStyle(color: Colors.white70)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 20),
-                  onPressed: onRemove,
+                  onPressed: widget.onRemove,
                 ),
               ],
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'Server Name'),
-              controller: TextEditingController(text: link.serverName),
-              onChanged: (v) {
-                link.serverName = v;
-                onChanged();
-              },
+              controller: _serverCtrl,
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'URL'),
-              controller: TextEditingController(text: link.url),
-              onChanged: (v) {
-                link.url = v;
-                onChanged();
-              },
+              controller: _urlCtrl,
             ),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     decoration: const InputDecoration(labelText: 'Size'),
-                    controller: TextEditingController(text: link.size),
-                    onChanged: (v) {
-                      link.size = v;
-                      onChanged();
-                    },
+                    controller: _sizeCtrl,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     decoration: const InputDecoration(labelText: 'Quality'),
-                    controller: TextEditingController(text: link.quality),
-                    onChanged: (v) {
-                      link.quality = v;
-                      onChanged();
-                    },
+                    controller: _qualityCtrl,
                   ),
                 ),
               ],
             ),
-            if (showFileName)
+            if (widget.showFileName)
               TextField(
                 decoration: const InputDecoration(labelText: 'File Name'),
-                controller: TextEditingController(text: link.fileName ?? ''),
-                onChanged: (v) {
-                  link.fileName = v;
-                  onChanged();
-                },
+                controller: _fileNameCtrl,
               ),
           ],
         ),
@@ -428,19 +447,40 @@ class _LinkCard extends StatelessWidget {
   }
 }
 
-// ---------- Season Card ----------
-class _SeasonCard extends StatelessWidget {
+// ---------- Season Card (StatefulWidget) ----------
+class SeasonCard extends StatefulWidget {
   final Season season;
   final int index;
-  final VoidCallback onChanged;
   final VoidCallback onRemove;
 
-  const _SeasonCard({
+  const SeasonCard({
+    super.key,
     required this.season,
     required this.index,
-    required this.onChanged,
     required this.onRemove,
   });
+
+  @override
+  State<SeasonCard> createState() => _SeasonCardState();
+}
+
+class _SeasonCardState extends State<SeasonCard> {
+  late TextEditingController _nameCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.season.name);
+    _nameCtrl.addListener(() {
+      widget.season.name = _nameCtrl.text;
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -455,22 +495,18 @@ class _SeasonCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Season #$index',
+                Text('Season #${widget.index}',
                     style: const TextStyle(color: Colors.white)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 20),
-                  onPressed: onRemove,
+                  onPressed: widget.onRemove,
                 ),
               ],
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'Season Name'),
-              controller: TextEditingController(text: season.name),
-              onChanged: (v) {
-                season.name = v;
-                onChanged();
-              },
+              controller: _nameCtrl,
             ),
             const SizedBox(height: 8),
             Row(
@@ -480,22 +516,25 @@ class _SeasonCard extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
                 TextButton.icon(
                   onPressed: () {
-                    season.episodes.add(Episode.empty());
-                    onChanged();
+                    setState(() {
+                      widget.season.episodes.add(Episode.empty());
+                    });
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add Episode'),
                 ),
               ],
             ),
-            for (var i = 0; i < season.episodes.length; i++)
-              _EpisodeCard(
-                episode: season.episodes[i],
+            for (var i = 0; i < widget.season.episodes.length; i++)
+              EpisodeCard(
+                key: ValueKey(
+                    'ep_${widget.index}_$i\_${widget.season.episodes[i].hashCode}'),
+                episode: widget.season.episodes[i],
                 index: i + 1,
-                onChanged: onChanged,
                 onRemove: () {
-                  season.episodes.removeAt(i);
-                  onChanged();
+                  setState(() {
+                    widget.season.episodes.removeAt(i);
+                  });
                 },
               ),
           ],
@@ -505,19 +544,42 @@ class _SeasonCard extends StatelessWidget {
   }
 }
 
-// ---------- Episode Card ----------
-class _EpisodeCard extends StatelessWidget {
+// ---------- Episode Card (StatefulWidget) ----------
+class EpisodeCard extends StatefulWidget {
   final Episode episode;
   final int index;
-  final VoidCallback onChanged;
   final VoidCallback onRemove;
 
-  const _EpisodeCard({
+  const EpisodeCard({
+    super.key,
     required this.episode,
     required this.index,
-    required this.onChanged,
     required this.onRemove,
   });
+
+  @override
+  State<EpisodeCard> createState() => _EpisodeCardState();
+}
+
+class _EpisodeCardState extends State<EpisodeCard> {
+  late TextEditingController _nameCtrl;
+  late TextEditingController _urlCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.episode.name);
+    _urlCtrl = TextEditingController(text: widget.episode.videoUrl);
+    _nameCtrl.addListener(() => widget.episode.name = _nameCtrl.text);
+    _urlCtrl.addListener(() => widget.episode.videoUrl = _urlCtrl.text);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _urlCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -532,33 +594,25 @@ class _EpisodeCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Episode #$index',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text('Episode #${widget.index}',
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 13)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 18),
-                  onPressed: onRemove,
+                  onPressed: widget.onRemove,
                 ),
               ],
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'Episode Name'),
-              controller: TextEditingController(text: episode.name),
-              onChanged: (v) {
-                episode.name = v;
-                onChanged();
-              },
+              controller: _nameCtrl,
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'Video URL'),
-              controller: TextEditingController(text: episode.videoUrl),
-              onChanged: (v) {
-                episode.videoUrl = v;
-                onChanged();
-              },
+              controller: _urlCtrl,
             ),
             const SizedBox(height: 6),
-            // Episode download links
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -566,22 +620,25 @@ class _EpisodeCard extends StatelessWidget {
                     style: TextStyle(color: Colors.white54, fontSize: 12)),
                 TextButton(
                   onPressed: () {
-                    episode.downloadLinks.add(ServerLink.empty());
-                    onChanged();
+                    setState(() {
+                      widget.episode.downloadLinks.add(ServerLink.empty());
+                    });
                   },
                   child: const Text('+ Link',
                       style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
-            for (var i = 0; i < episode.downloadLinks.length; i++)
-              _MiniLinkEditor(
-                link: episode.downloadLinks[i],
+            for (var i = 0; i < widget.episode.downloadLinks.length; i++)
+              MiniLinkEditor(
+                key: ValueKey(
+                    'epdl_${widget.index}_$i\_${widget.episode.downloadLinks[i].hashCode}'),
+                link: widget.episode.downloadLinks[i],
                 index: i + 1,
-                onChanged: onChanged,
                 onRemove: () {
-                  episode.downloadLinks.removeAt(i);
-                  onChanged();
+                  setState(() {
+                    widget.episode.downloadLinks.removeAt(i);
+                  });
                 },
               ),
             const SizedBox(height: 6),
@@ -592,22 +649,25 @@ class _EpisodeCard extends StatelessWidget {
                     style: TextStyle(color: Colors.white54, fontSize: 12)),
                 TextButton(
                   onPressed: () {
-                    episode.watchLinks.add(ServerLink.empty());
-                    onChanged();
+                    setState(() {
+                      widget.episode.watchLinks.add(ServerLink.empty());
+                    });
                   },
                   child: const Text('+ Link',
                       style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
-            for (var i = 0; i < episode.watchLinks.length; i++)
-              _MiniLinkEditor(
-                link: episode.watchLinks[i],
+            for (var i = 0; i < widget.episode.watchLinks.length; i++)
+              MiniLinkEditor(
+                key: ValueKey(
+                    'epwl_${widget.index}_$i\_${widget.episode.watchLinks[i].hashCode}'),
+                link: widget.episode.watchLinks[i],
                 index: i + 1,
-                onChanged: onChanged,
                 onRemove: () {
-                  episode.watchLinks.removeAt(i);
-                  onChanged();
+                  setState(() {
+                    widget.episode.watchLinks.removeAt(i);
+                  });
                 },
               ),
           ],
@@ -617,18 +677,51 @@ class _EpisodeCard extends StatelessWidget {
   }
 }
 
-class _MiniLinkEditor extends StatelessWidget {
+// ---------- Mini Link Editor (StatefulWidget) ----------
+class MiniLinkEditor extends StatefulWidget {
   final ServerLink link;
   final int index;
-  final VoidCallback onChanged;
   final VoidCallback onRemove;
 
-  const _MiniLinkEditor({
+  const MiniLinkEditor({
+    super.key,
     required this.link,
     required this.index,
-    required this.onChanged,
     required this.onRemove,
   });
+
+  @override
+  State<MiniLinkEditor> createState() => _MiniLinkEditorState();
+}
+
+class _MiniLinkEditorState extends State<MiniLinkEditor> {
+  late TextEditingController _serverCtrl;
+  late TextEditingController _urlCtrl;
+  late TextEditingController _sizeCtrl;
+  late TextEditingController _qualityCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _serverCtrl = TextEditingController(text: widget.link.serverName);
+    _urlCtrl = TextEditingController(text: widget.link.url);
+    _sizeCtrl = TextEditingController(text: widget.link.size);
+    _qualityCtrl = TextEditingController(text: widget.link.quality);
+
+    _serverCtrl.addListener(() => widget.link.serverName = _serverCtrl.text);
+    _urlCtrl.addListener(() => widget.link.url = _urlCtrl.text);
+    _sizeCtrl.addListener(() => widget.link.size = _sizeCtrl.text);
+    _qualityCtrl.addListener(() => widget.link.quality = _qualityCtrl.text);
+  }
+
+  @override
+  void dispose() {
+    _serverCtrl.dispose();
+    _urlCtrl.dispose();
+    _sizeCtrl.dispose();
+    _qualityCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -641,18 +734,14 @@ class _MiniLinkEditor extends StatelessWidget {
               Expanded(
                 child: TextField(
                   decoration: InputDecoration(
-                      labelText: 'Server #$index', isDense: true),
-                  controller: TextEditingController(text: link.serverName),
-                  onChanged: (v) {
-                    link.serverName = v;
-                    onChanged();
-                  },
+                      labelText: 'Server #${widget.index}', isDense: true),
+                  controller: _serverCtrl,
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.close,
                     color: Colors.redAccent, size: 18),
-                onPressed: onRemove,
+                onPressed: widget.onRemove,
                 visualDensity: VisualDensity.compact,
               ),
             ],
@@ -660,11 +749,7 @@ class _MiniLinkEditor extends StatelessWidget {
           TextField(
             decoration:
                 const InputDecoration(labelText: 'URL', isDense: true),
-            controller: TextEditingController(text: link.url),
-            onChanged: (v) {
-              link.url = v;
-              onChanged();
-            },
+            controller: _urlCtrl,
           ),
           Row(
             children: [
@@ -672,11 +757,7 @@ class _MiniLinkEditor extends StatelessWidget {
                 child: TextField(
                   decoration: const InputDecoration(
                       labelText: 'Size', isDense: true),
-                  controller: TextEditingController(text: link.size),
-                  onChanged: (v) {
-                    link.size = v;
-                    onChanged();
-                  },
+                  controller: _sizeCtrl,
                 ),
               ),
               const SizedBox(width: 8),
@@ -684,11 +765,7 @@ class _MiniLinkEditor extends StatelessWidget {
                 child: TextField(
                   decoration: const InputDecoration(
                       labelText: 'Quality', isDense: true),
-                  controller: TextEditingController(text: link.quality),
-                  onChanged: (v) {
-                    link.quality = v;
-                    onChanged();
-                  },
+                  controller: _qualityCtrl,
                 ),
               ),
             ],
