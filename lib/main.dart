@@ -99,6 +99,67 @@ class _HomeScreenState extends State<HomeScreen> {
     await StorageService.savePosts(_posts);
   }
 
+  Future<void> _importJson() async {
+    final imported = await StorageService.importFromFile();
+    if (imported == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Import cancelled or invalid file')),
+      );
+      return;
+    }
+    if (imported.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No valid posts found in file')),
+      );
+      return;
+    }
+    // Ask user how to import
+    if (!mounted) return;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF15151C),
+        title: const Text('Import JSON',
+            style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Found ${imported.length} posts. Merge with existing (${_posts.length}) or Replace all?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'merge'),
+            child: const Text('Merge'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'replace'),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || choice == 'cancel') return;
+    setState(() {
+      if (choice == 'replace') {
+        _posts
+          ..clear()
+          ..addAll(imported);
+      } else {
+        _posts.addAll(imported);
+      }
+    });
+    _persist();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Imported ${imported.length} posts ($choice)')),
+    );
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -321,6 +382,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ]
             : [
+                IconButton(
+                  onPressed: _importJson,
+                  icon: const Icon(Icons.file_upload_outlined),
+                  tooltip: 'Import JSON',
+                ),
                 IconButton(
                   onPressed: _openOutput,
                   icon: const Icon(Icons.code),
