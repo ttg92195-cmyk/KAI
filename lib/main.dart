@@ -39,6 +39,8 @@ class KaiApp extends StatelessWidget {
             borderSide: BorderSide.none,
           ),
           labelStyle: const TextStyle(color: Colors.white70),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

@@ -146,7 +146,7 @@ class _FormScreenState extends State<FormScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
         children: [
           // --- TMDB block ---
           _sectionLabel('TMDB Information'),
@@ -166,20 +166,20 @@ class _FormScreenState extends State<FormScreen> {
                       width: 90,
                       height: 135,
                     ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   children: [
                     _textField(_titleCtrl, 'Title'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Expanded(child: _textField(_yearCtrl, 'Year')),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Expanded(child: _textField(_tmdbIdCtrl, 'TMDB ID')),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       value: _post.type,
                       decoration: const InputDecoration(labelText: 'Type'),
@@ -198,52 +198,64 @@ class _FormScreenState extends State<FormScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _textField(_posterCtrl, 'Poster URL'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _textField(_overviewCtrl, 'Overview', maxLines: 4),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _textField(_categoriesCtrl, 'Categories (comma separated)'),
 
           // --- File info ---
-          const SizedBox(height: 20),
+          _sectionHeight(),
           _sectionLabel('File Information'),
           Row(
             children: [
               Expanded(child: _textField(_resolutionCtrl, 'Resolution')),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(child: _textField(_fileSizeCtrl, 'File Size')),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(child: _textField(_formatCtrl, 'Format')),
             ],
           ),
 
           // --- Download links ---
-          const SizedBox(height: 20),
-          _sectionHeader('Download Links', () {
+          _sectionHeight(),
+          _linksHeader('Download Links', () {
             setState(() => _post.downloadLinks.add(ServerLink.empty()));
+          }, () {
+            setState(() => _addAutoSixLinks(_post.downloadLinks));
           }),
           for (var i = 0; i < _post.downloadLinks.length; i++)
-            LinkCard(
-              key: ValueKey('dl_$i\_${_post.downloadLinks[i].hashCode}'),
-              index: i + 1,
-              link: _post.downloadLinks[i],
-              showFileName: true,
-              onRemove: () => setState(() => _post.downloadLinks.removeAt(i)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: LinkCard(
+                key: ValueKey('dl_$i\_${_post.downloadLinks[i].hashCode}'),
+                index: i + 1,
+                link: _post.downloadLinks[i],
+                showFileName: true,
+                onRemove: () =>
+                    setState(() => _post.downloadLinks.removeAt(i)),
+              ),
             ),
 
           // --- Watch links ---
-          const SizedBox(height: 20),
-          _sectionHeader('Watch Links', () {
+          _sectionHeight(),
+          _linksHeader('Watch Links', () {
             setState(() => _post.watchLinks.add(ServerLink.empty()));
+          }, () {
+            setState(() => _addAutoSixLinks(_post.watchLinks));
           }),
           for (var i = 0; i < _post.watchLinks.length; i++)
-            LinkCard(
-              key: ValueKey('wl_$i\_${_post.watchLinks[i].hashCode}'),
-              index: i + 1,
-              link: _post.watchLinks[i],
-              showFileName: false,
-              onRemove: () => setState(() => _post.watchLinks.removeAt(i)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: LinkCard(
+                key: ValueKey('wl_$i\_${_post.watchLinks[i].hashCode}'),
+                index: i + 1,
+                link: _post.watchLinks[i],
+                showFileName: false,
+                onRemove: () =>
+                    setState(() => _post.watchLinks.removeAt(i)),
+              ),
             ),
 
           // --- Seasons (only for series) ---
@@ -288,6 +300,72 @@ class _FormScreenState extends State<FormScreen> {
     );
   }
 
+  Widget _sectionHeight() => const SizedBox(height: 24);
+
+  /// Section header with two actions: +1 (Add) and Auto +6 (creates 6 links with
+  /// pre-filled server names: Server 1, Server 1, Server 2, Server 2, Server 3, Server 3).
+  Widget _linksHeader(String text, VoidCallback onAddOne, VoidCallback onAutoSix) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10, top: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              color: Color(0xFFE50914),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              letterSpacing: 0.5,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                onPressed: onAutoSix,
+                icon: const Icon(Icons.bolt, size: 16, color: Color(0xFFE50914)),
+                label: const Text('Auto +6',
+                    style: TextStyle(color: Color(0xFFE50914))),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onAddOne,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add'),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Adds 6 ServerLinks with pre-filled server names:
+  ///   Link #1, #2 -> "Server 1"
+  ///   Link #3, #4 -> "Server 2"
+  ///   Link #5, #6 -> "Server 3"
+  void _addAutoSixLinks(List<ServerLink> list) {
+    final serverNames = [
+      'Server 1', 'Server 1',
+      'Server 2', 'Server 2',
+      'Server 3', 'Server 3',
+    ];
+    for (final name in serverNames) {
+      list.add(ServerLink(serverName: name, url: ''));
+    }
+  }
+
   Widget _sectionHeader(String text, VoidCallback onAdd) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -307,7 +385,11 @@ class _FormScreenState extends State<FormScreen> {
     return TextField(
       controller: c,
       maxLines: maxLines,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      ),
     );
   }
 }
@@ -368,9 +450,9 @@ class _LinkCardState extends State<LinkCard> {
   Widget build(BuildContext context) {
     return Card(
       color: const Color(0xFF15151C),
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -378,7 +460,9 @@ class _LinkCardState extends State<LinkCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Link #${widget.index}',
-                    style: const TextStyle(color: Colors.white70)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 20),
@@ -386,14 +470,17 @@ class _LinkCardState extends State<LinkCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 6),
             TextField(
               decoration: const InputDecoration(labelText: 'Server Name'),
               controller: _serverCtrl,
             ),
+            const SizedBox(height: 10),
             TextField(
               decoration: const InputDecoration(labelText: 'URL'),
               controller: _urlCtrl,
             ),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
@@ -402,7 +489,7 @@ class _LinkCardState extends State<LinkCard> {
                     controller: _sizeCtrl,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     decoration: const InputDecoration(labelText: 'Quality'),
@@ -411,11 +498,13 @@ class _LinkCardState extends State<LinkCard> {
                 ),
               ],
             ),
-            if (widget.showFileName)
+            if (widget.showFileName) ...[
+              const SizedBox(height: 10),
               TextField(
                 decoration: const InputDecoration(labelText: 'File Name'),
                 controller: _fileNameCtrl,
               ),
+            ],
           ],
         ),
       ),
@@ -464,7 +553,7 @@ class _SeasonCardState extends State<SeasonCard> {
       color: const Color(0xFF1A1A22),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -472,7 +561,9 @@ class _SeasonCardState extends State<SeasonCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Season #${widget.index}',
-                    style: const TextStyle(color: Colors.white)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 20),
@@ -480,11 +571,12 @@ class _SeasonCardState extends State<SeasonCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 6),
             TextField(
               decoration: const InputDecoration(labelText: 'Season Name'),
               controller: _nameCtrl,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -502,16 +594,19 @@ class _SeasonCardState extends State<SeasonCard> {
               ],
             ),
             for (var i = 0; i < widget.season.episodes.length; i++)
-              EpisodeCard(
-                key: ValueKey(
-                    'ep_${widget.index}_$i\_${widget.season.episodes[i].hashCode}'),
-                episode: widget.season.episodes[i],
-                index: i + 1,
-                onRemove: () {
-                  setState(() {
-                    widget.season.episodes.removeAt(i);
-                  });
-                },
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: EpisodeCard(
+                  key: ValueKey(
+                      'ep_${widget.index}_$i\_${widget.season.episodes[i].hashCode}'),
+                  episode: widget.season.episodes[i],
+                  index: i + 1,
+                  onRemove: () {
+                    setState(() {
+                      widget.season.episodes.removeAt(i);
+                    });
+                  },
+                ),
               ),
           ],
         ),
@@ -561,9 +656,9 @@ class _EpisodeCardState extends State<EpisodeCard> {
   Widget build(BuildContext context) {
     return Card(
       color: const Color(0xFF15151C),
-      margin: const EdgeInsets.only(top: 8),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -572,7 +667,9 @@ class _EpisodeCardState extends State<EpisodeCard> {
               children: [
                 Text('Episode #${widget.index}',
                     style: const TextStyle(
-                        color: Colors.white70, fontSize: 13)),
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 18),
@@ -580,71 +677,81 @@ class _EpisodeCardState extends State<EpisodeCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 4),
             TextField(
               decoration: const InputDecoration(labelText: 'Episode Name'),
               controller: _nameCtrl,
             ),
+            const SizedBox(height: 10),
             TextField(
               decoration: const InputDecoration(labelText: 'Video URL'),
               controller: _urlCtrl,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Download Links',
                     style: TextStyle(color: Colors.white54, fontSize: 12)),
-                TextButton(
+                TextButton.icon(
                   onPressed: () {
                     setState(() {
                       widget.episode.downloadLinks.add(ServerLink.empty());
                     });
                   },
-                  child: const Text('+ Link',
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Add',
                       style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
             for (var i = 0; i < widget.episode.downloadLinks.length; i++)
-              MiniLinkEditor(
-                key: ValueKey(
-                    'epdl_${widget.index}_$i\_${widget.episode.downloadLinks[i].hashCode}'),
-                link: widget.episode.downloadLinks[i],
-                index: i + 1,
-                onRemove: () {
-                  setState(() {
-                    widget.episode.downloadLinks.removeAt(i);
-                  });
-                },
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: MiniLinkEditor(
+                  key: ValueKey(
+                      'epdl_${widget.index}_$i\_${widget.episode.downloadLinks[i].hashCode}'),
+                  link: widget.episode.downloadLinks[i],
+                  index: i + 1,
+                  onRemove: () {
+                    setState(() {
+                      widget.episode.downloadLinks.removeAt(i);
+                    });
+                  },
+                ),
               ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Watch Links',
                     style: TextStyle(color: Colors.white54, fontSize: 12)),
-                TextButton(
+                TextButton.icon(
                   onPressed: () {
                     setState(() {
                       widget.episode.watchLinks.add(ServerLink.empty());
                     });
                   },
-                  child: const Text('+ Link',
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Add',
                       style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
             for (var i = 0; i < widget.episode.watchLinks.length; i++)
-              MiniLinkEditor(
-                key: ValueKey(
-                    'epwl_${widget.index}_$i\_${widget.episode.watchLinks[i].hashCode}'),
-                link: widget.episode.watchLinks[i],
-                index: i + 1,
-                onRemove: () {
-                  setState(() {
-                    widget.episode.watchLinks.removeAt(i);
-                  });
-                },
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: MiniLinkEditor(
+                  key: ValueKey(
+                      'epwl_${widget.index}_$i\_${widget.episode.watchLinks[i].hashCode}'),
+                  link: widget.episode.watchLinks[i],
+                  index: i + 1,
+                  onRemove: () {
+                    setState(() {
+                      widget.episode.watchLinks.removeAt(i);
+                    });
+                  },
+                ),
               ),
           ],
         ),
@@ -702,7 +809,7 @@ class _MiniLinkEditorState extends State<MiniLinkEditor> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: 8),
       child: Column(
         children: [
           Row(
@@ -722,11 +829,13 @@ class _MiniLinkEditorState extends State<MiniLinkEditor> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
           TextField(
             decoration:
                 const InputDecoration(labelText: 'URL', isDense: true),
             controller: _urlCtrl,
           ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -736,7 +845,7 @@ class _MiniLinkEditorState extends State<MiniLinkEditor> {
                   controller: _sizeCtrl,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: TextField(
                   decoration: const InputDecoration(
